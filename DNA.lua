@@ -323,7 +323,7 @@ function executeVehicleSystems(vehicle)
 			if config.ConfigList[vehicleModelName].grillLights ~= nil then
 				if VehicleControlActivityDict[car].lightSync == 0 then
 					VehicleControlActivityDict[car].lightSync = 1
-					Citizen.CreateThread(function()
+					CreateThread(function()
 					lightSyncSystem(car,config.ConfigList[vehicleModelName].grillLights)
 					end)
 				end
@@ -331,7 +331,7 @@ function executeVehicleSystems(vehicle)
 			if config.ConfigList[vehicleModelName].brakeLights ~= nil then
 				if VehicleControlActivityDict[car].brakeSync == 0 then
 					VehicleControlActivityDict[car].brakeSync = 1
-					Citizen.CreateThread(function()
+					CreateThread(function()
 					brakeLightSystem(car,config.ConfigList[vehicleModelName].brakeLights)
 					end)
 				end
@@ -339,7 +339,7 @@ function executeVehicleSystems(vehicle)
 			if config.ConfigList[vehicleModelName].lightbarPattern ~= nil then
 				if VehicleControlActivityDict[car].patternSync == 0 then
 					VehicleControlActivityDict[car].patternSync = 1
-					Citizen.CreateThread(function()
+					CreateThread(function()
 					lightbarPatternSystem(car,config.ConfigList[vehicleModelName].lightbarPattern)
 					end)
 				end
@@ -347,7 +347,7 @@ function executeVehicleSystems(vehicle)
 			if config.ConfigList[vehicleModelName].hornLighting ~= nil then
 				if VehicleControlActivityDict[car].hornLightSync == 0 then
 					VehicleControlActivityDict[car].hornLightSync = 1
-					Citizen.CreateThread(function()
+					CreateThread(function()
 					hornLightSystem(car,config.ConfigList[vehicleModelName].hornLighting, config.ConfigList[vehicleModelName].lightbarPattern)
 					end)
 				end
@@ -372,7 +372,7 @@ function auditVehicleControlList(vehicleAudit)
 end
 
 -- VehicleControlList monitor function, with its own wait time to ensure that nothing attempts to execute functions on a car that doesn't exist.
-Citizen.CreateThread(function()
+CreateThread(function()
 	while true do
 		for car in pairs(VehicleControlList) do
 			if not VerifyVehicleStateLightReverse(clientPlayer, car) then
@@ -385,7 +385,7 @@ Citizen.CreateThread(function()
 end)
 
 -- Main loop!
-Citizen.CreateThread(function()
+CreateThread(function()
 	local stopLoopVehicle = 0
 	while true do
 		clientPlayer = cache?.ped or PlayerPedId()
@@ -402,7 +402,7 @@ Citizen.CreateThread(function()
 	end
 end)
 
-Citizen.CreateThread(function()
+CreateThread(function()
 	if debug then
 		while true do
 			print("-----------------------------------------------------------")
