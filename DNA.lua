@@ -49,24 +49,15 @@ local VehicleControlUniqueList = {}
 local sleep = 1000
 
 function IsPedOperatingVehicle(playerID, vehicle)
-	if (GetPedInVehicleSeat(vehicle,-1) == playerID) or (GetPedInVehicleSeat(vehicle,-1) == 0) then
-		return true
-	end
-	return false
+	return GetPedInVehicleSeat(vehicle, -1) == playerID
 end
 
 function VerifyVehicleState(playerID, vehicle)
-	if DoesEntityExist(vehicle) and ((GetPedInVehicleSeat(vehicle,-1) == playerID) or (GetPedInVehicleSeat(vehicle,-1) == 0)) and IsVehicleSirenOn(vehicle) then
-		return true
-	end
-	return false
+	return DoesEntityExist(vehicle) and IsPedOperatingVehicle(playerID, vehicle) and IsVehicleSirenOn(vehicle)
 end
 
 function VerifyVehicleStateLightReverse(playerID, vehicle)
-	if DoesEntityExist(vehicle) and ((GetPedInVehicleSeat(vehicle,-1) == playerID) or (GetPedInVehicleSeat(vehicle,-1) == 0)) then
-		return true
-	end
-	return false
+	return DoesEntityExist(vehicle) and IsPedOperatingVehicle(playerID, vehicle)
 end
 
 function lightSyncSystem(vehicle, extraList)
