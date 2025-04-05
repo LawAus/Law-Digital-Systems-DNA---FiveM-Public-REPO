@@ -18,9 +18,10 @@ list. Ensure that the name of the car matches the ingame model name!
 
 config = {}
 
+-- For Debugging
+config.debug = true -- true or false
+
 -- [`example`] = { grillLights = nil , brakeLights = nil , lightbarPattern = nil , forceExtraOn = nil , hornLighting = nil , isMarked = nil }
-
-
 config.ConfigList = {
 
     [`DUMMY CONFIG 1`] = { grillLights = nil , brakeLights = nil , lightbarPattern = nil , forceExtraOn = nil , hornLighting = nil , isMarked = nil },

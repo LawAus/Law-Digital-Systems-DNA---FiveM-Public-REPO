@@ -28,9 +28,6 @@
 -- Config List
 local carList = ""
 
--- For debug mode 
-local debug = false
-
 -- Local Variables
 local clientPlayer = PlayerPedId()
 local vehicle = ""
@@ -49,24 +46,16 @@ local VehicleControlUniqueList = {}
 local sleep = 1000
 
 function IsPedOperatingVehicle(playerID, vehicle)
-	if (GetPedInVehicleSeat(vehicle,-1) == playerID) or (GetPedInVehicleSeat(vehicle,-1) == 0) then
-		return true
-	end
-	return false
+    local driver = GetPedInVehicleSeat(vehicle, -1)
+    return driver == playerID or driver == 0
 end
 
 function VerifyVehicleState(playerID, vehicle)
-	if DoesEntityExist(vehicle) and ((GetPedInVehicleSeat(vehicle,-1) == playerID) or (GetPedInVehicleSeat(vehicle,-1) == 0)) and IsVehicleSirenOn(vehicle) then
-		return true
-	end
-	return false
+	return DoesEntityExist(vehicle) and IsPedOperatingVehicle(playerID, vehicle) and IsVehicleSirenOn(vehicle)
 end
 
 function VerifyVehicleStateLightReverse(playerID, vehicle)
-	if DoesEntityExist(vehicle) and ((GetPedInVehicleSeat(vehicle,-1) == playerID) or (GetPedInVehicleSeat(vehicle,-1) == 0)) then
-		return true
-	end
-	return false
+	return DoesEntityExist(vehicle) and IsPedOperatingVehicle(playerID, vehicle)
 end
 
 function lightSyncSystem(vehicle, extraList)
@@ -75,7 +64,7 @@ function lightSyncSystem(vehicle, extraList)
 	local lightStateExtra = extraList
 	local waitTime = 1000 -- This time is optimal for the lowest % usage and response time!
 
-	if debug then
+	if config.debug then
 		print("LIGHT SYNC RAN FOR ",lightSyncVehicle)
 	end
 
@@ -85,8 +74,10 @@ function lightSyncSystem(vehicle, extraList)
 			for i, extra in ipairs(lightStateExtra) do
 				local verify = (extra > 0 and (highBeamsOn == 0 and lightsOn == 0)) or (extra < 0 and (highBeamsOn == 1 or lightsOn == 1))
 				if (IsVehicleExtraTurnedOn(lightSyncVehicle, math.abs(extra)) and 1 or 0) ~= (verify and 1 or 0) then
-					if not IsControlPressed(0,72) then -- BRAKE SYSTEM BRANCH ||| Added due to sync issue on sperate threads! Possibly considering to merge systems!
+					if not IsControlPressed(0, 72) then
+						SetVehicleAutoRepairDisabled(lightSyncVehicle, true)
 						SetVehicleExtra(lightSyncVehicle, math.abs(extra), verify and 0 or 1)
+						SetVehicleAutoRepairDisabled(lightSyncVehicle, false)
 					end
 				end
 			end
@@ -97,7 +88,7 @@ function lightSyncSystem(vehicle, extraList)
 		Wait(waitTime)
 	end
 
-	if debug then
+	if config.debug then
 		print("LIGHT SYNC STOPPED FOR ",lightSyncVehicle)
 	end
 end
@@ -108,7 +99,7 @@ function brakeLightSystem(vehicle, extraList)
 	local lightStateExtra = extraList
 	local waitTime = 267 -- This time is optimal for the lowest % usage and response time!
 	
-	if debug then
+	if config.debug then
 		print("BRAKE LIGHT RAN FOR ",brakeVehicle)
 	end
 
@@ -117,9 +108,11 @@ function brakeLightSystem(vehicle, extraList)
 		if VerifyVehicleState(clientPlayer, brakeVehicle) then
 			if IsControlPressed(0,72) then
 				for i, extra in ipairs(lightStateExtra) do
-					if IsVehicleExtraTurnedOn(brakeVehicle,extra) == 1 then
-						SetVehicleExtra(brakeVehicle,extra,1)
-					end
+					if not IsControlPressed(0, 72) then
+						SetVehicleAutoRepairDisabled(brakeVehicle, true)
+						SetVehicleExtra(brakeVehicle, extra, 1)
+						SetVehicleAutoRepairDisabled(brakeVehicle, false)
+					end				
 				end
 			end
 		else
@@ -129,7 +122,7 @@ function brakeLightSystem(vehicle, extraList)
 		Wait(waitTime)
 	end
 	
-	if debug then
+	if config.debug then
 		print("BRAKE LIGHT STOPPED FOR ",brakeVehicle)
 	end
 
@@ -142,17 +135,20 @@ function lightbarPatternSystem(vehicle, extraList)
 	local cyclePattern = {}
 	local waitTime = 1000 
 
-	if debug then
+	if config.debug then
 		print("LIGHTBAR PATTERN SYSTEM RAN FOR ",lightbarVehicle)
 	end
 
-	for i,extra in ipairs(lightStateExtra) do
+	for _, extra in ipairs(lightStateExtra) do
 		if extra > 0 then
-			table.insert(cyclePattern,extra)
+			table.insert(cyclePattern, extra)
 		end
 		if extra ~= 0 then
-			if IsVehicleExtraTurnedOn(lightbarVehicle,math.abs(extra)) ~= ((extra < 0) and 1 or false) then
-				SetVehicleExtra(lightbarVehicle,(math.abs(extra)),((extra < 0) and 0 or 1))
+			local condition = not IsVehicleExtraTurnedOn(lightbarVehicle, math.abs(extra)) ~= ((extra < 0) and 1 or false)
+			if condition then
+				SetVehicleAutoRepairDisabled(lightbarVehicle, true)
+				SetVehicleExtra(lightbarVehicle, math.abs(extra), (extra < 0) and 0 or 1)
+				SetVehicleAutoRepairDisabled(lightbarVehicle, false)
 			end
 		end
 	end
@@ -169,8 +165,10 @@ function lightbarPatternSystem(vehicle, extraList)
 					local cycleTime = math.random(1200,5500)
 					local lightbarState = math.random(cyclePattern[1],cyclePattern[#cyclePattern]) -- Determines random pattern choice for the cycle!
 
-					if IsVehicleExtraTurnedOn(lightbarVehicle,lightbarState) == false then
-						SetVehicleExtra(lightbarVehicle,lightbarState,0)
+					if not IsVehicleExtraTurnedOn(lightbarVehicle, lightbarState) then
+						SetVehicleAutoRepairDisabled(lightbarVehicle, true)
+						SetVehicleExtra(lightbarVehicle, lightbarState, 0)
+						SetVehicleAutoRepairDisabled(lightbarVehicle, false)
 					end
 					local lightbarStartTime = GetGameTimer()
 					while math.abs(GetGameTimer() - lightbarStartTime) < cycleTime do
@@ -182,8 +180,10 @@ function lightbarPatternSystem(vehicle, extraList)
 							VehicleControlActivityDict[lightbarVehicle].patternSync = 0
 						end
 					end
-					if IsVehicleExtraTurnedOn(lightbarVehicle,lightbarState) == 1 then
-						SetVehicleExtra(lightbarVehicle,lightbarState,1)
+					if IsVehicleExtraTurnedOn(lightbarVehicle, lightbarState) == 1 then
+						SetVehicleAutoRepairDisabled(lightbarVehicle, true)
+						SetVehicleExtra(lightbarVehicle, lightbarState, 1)
+						SetVehicleAutoRepairDisabled(lightbarVehicle, false)
 					end
 				else
 					active = false
@@ -200,8 +200,10 @@ function lightbarPatternSystem(vehicle, extraList)
 			if checkHornStatus == nil or not (IsDisabledControlPressed(0, 86) or IsControlPressed(0, 86)) then
 				waitTime = 1000
 				if VerifyVehicleState(clientPlayer, lightbarVehicle) then
-					if IsVehicleExtraTurnedOn(lightbarVehicle,cyclePattern[1]) == false then
-						SetVehicleExtra(lightbarVehicle,cyclePattern[1],0)
+					if IsVehicleExtraTurnedOn(lightbarVehicle, cyclePattern[1]) == false then
+						SetVehicleAutoRepairDisabled(lightbarVehicle, true)
+						SetVehicleExtra(lightbarVehicle, cyclePattern[1], 0)
+						SetVehicleAutoRepairDisabled(lightbarVehicle, false)
 					end
 				else
 					active = false
@@ -217,7 +219,7 @@ function lightbarPatternSystem(vehicle, extraList)
 		print("Critical Error on pattern cycle system. Pattern count less than 1!")
 	end
 
-	if debug then
+	if config.debug then
 		print("LIGHTBAR PATTERN SYSTEM STOPPED FOR ",lightbarVehicle)
 	end
 
@@ -235,15 +237,17 @@ function hornLightSystem(vehicle, dictionary, patternList)
     local waitTime = 100
     local delayStartTime = extraDict.startDelay[1] or 0
 
-	if debug then
+	if config.debug then
 		print("HORN LIGHTING SYSTEM RAN FOR ",hornVehicle)
 	end
 
     for _, table in ipairs(extraDict) do
         for _, data in ipairs(table) do
             if data > 0 and IsVehicleExtraTurnedOn(hornVehicle, data) then
-                SetVehicleExtra(hornVehicle, data, 1)
-            end
+				SetVehicleAutoRepairDisabled(hornVehicle, true)
+				SetVehicleExtra(hornVehicle, data, 1)
+				SetVehicleAutoRepairDisabled(hornVehicle, false)
+			end
         end
     end
 
@@ -269,7 +273,9 @@ function hornLightSystem(vehicle, dictionary, patternList)
 					if patternListSync ~= nil then
 						for i,dext in ipairs(patternListSync) do
                             if IsVehicleExtraTurnedOn(hornVehicle, math.abs(dext)) then
-                                SetVehicleExtra(hornVehicle, math.abs(dext), 1)
+								SetVehicleAutoRepairDisabled(hornVehicle, true)
+								SetVehicleExtra(hornVehicle, math.abs(dext), 1)
+								SetVehicleAutoRepairDisabled(hornVehicle, false)
 							end
 						end
 					end
@@ -277,8 +283,10 @@ function hornLightSystem(vehicle, dictionary, patternList)
                     while (GetGameTimer() - startTime < waitTimer) do
                         if IsDisabledControlPressed(0, 86) or IsControlPressed(0, 86) then
                             if not IsVehicleExtraTurnedOn(hornVehicle, extraA) then
-                                SetVehicleExtra(hornVehicle, extraA, 0)
-                            end
+								SetVehicleAutoRepairDisabled(hornVehicle, true)
+								SetVehicleExtra(hornVehicle, extraA, 0)
+								SetVehicleAutoRepairDisabled(hornVehicle, false)
+							end
                         else
                             fail = 1
                             break
@@ -286,8 +294,10 @@ function hornLightSystem(vehicle, dictionary, patternList)
                         Wait(100)
                     end
                     if IsVehicleExtraTurnedOn(hornVehicle, extraA) then
-                        SetVehicleExtra(hornVehicle, extraA, 1)
-                    end
+						SetVehicleAutoRepairDisabled(hornVehicle, true)
+						SetVehicleExtra(hornVehicle, extraA, 1)
+						SetVehicleAutoRepairDisabled(hornVehicle, false)
+					end
                 end
                 if fail == 1 then
                     delayStartTime = extraDict.startDelay[1] or 0
@@ -308,34 +318,38 @@ function hornLightSystem(vehicle, dictionary, patternList)
         Wait(waitTime)
     end
 
-	if debug then
+	if config.debug then
 		print("HORN LIGHTING SYSTEM STOPPED FOR ",hornVehicle)
 	end
 
 end
 
 function executeVehicleSystems(vehicle)
-
 	local car = vehicle
-	local vehicleModelName = GetEntityModel(car)
-	if VerifyVehicleState(clientPlayer, car) then
-		if VehicleControlList[car] then
-			if config.ConfigList[vehicleModelName].grillLights ~= nil then
-				if VehicleControlActivityDict[car].lightSync == 0 then
-					VehicleControlActivityDict[car].lightSync = 1
-					Citizen.CreateThread(function()
-					lightSyncSystem(car,config.ConfigList[vehicleModelName].grillLights)
-					end)
-				end
-			end
-			if config.ConfigList[vehicleModelName].brakeLights ~= nil then
-				if VehicleControlActivityDict[car].brakeSync == 0 then
-					VehicleControlActivityDict[car].brakeSync = 1
-					Citizen.CreateThread(function()
-					brakeLightSystem(car,config.ConfigList[vehicleModelName].brakeLights)
-					end)
-				end
-			end
+    local vehicleModelName = GetEntityModel(car)
+
+    if not config or not config.ConfigList or not config.ConfigList[vehicleModelName] then
+        return
+    end
+
+    if VerifyVehicleState(clientPlayer, car) then
+        if VehicleControlList[car] then
+            if config.ConfigList[vehicleModelName].grillLights ~= nil then
+                if VehicleControlActivityDict[car] and VehicleControlActivityDict[car].lightSync == 0 then
+                    VehicleControlActivityDict[car].lightSync = 1
+                    Citizen.CreateThread(function()
+                        lightSyncSystem(car, config.ConfigList[vehicleModelName].grillLights)
+                    end)
+                end
+            end
+            if config.ConfigList[vehicleModelName].brakeLights ~= nil then
+                if VehicleControlActivityDict[car] and VehicleControlActivityDict[car].brakeSync == 0 then
+                    VehicleControlActivityDict[car].brakeSync = 1
+                    Citizen.CreateThread(function()
+                        brakeLightSystem(car, config.ConfigList[vehicleModelName].brakeLights)
+                    end)
+                end
+            end
 			if config.ConfigList[vehicleModelName].lightbarPattern ~= nil then
 				if VehicleControlActivityDict[car].patternSync == 0 then
 					VehicleControlActivityDict[car].patternSync = 1
@@ -403,7 +417,7 @@ Citizen.CreateThread(function()
 end)
 
 Citizen.CreateThread(function()
-	if debug then
+	if config.debug then
 		while true do
 			print("-----------------------------------------------------------")
 			for a,i in pairs(VehicleControlList) do
